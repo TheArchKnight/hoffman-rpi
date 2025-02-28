@@ -38,13 +38,14 @@
 #define MPU6050_ACCEL_CONFIG 0x1C
 #define I2C_PORT i2c0
 
-#include "hardware/i2c.h"
+#include <hardware/i2c.h>
+#include <cstdint>
 
 struct SensorData {
   int16_t accel[3];
   int16_t gyro[3];
 };
-
+static_assert(sizeof(SensorData) == 12, "Unexpected padding in SensorData");
 class MPU6050
 {
 public:

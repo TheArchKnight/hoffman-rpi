@@ -1,1 +1,19 @@
 -I/usr/share/pico-sdk/src/common/pico_base_headers/include
+-I /usr/lib/gcc/x86_64-pc-linux-gnu/13.3.1/include/c++
+-I /usr/lib/gcc/x86_64-pc-linux-gnu/13.3.1/include/c++/x86_64-pc-linux-gnu
+-I /usr/lib/gcc/x86_64-pc-linux-gnu/13.3.1/include/c++/backward
+-I /usr/lib/gcc/x86_64-pc-linux-gnu/13.3.1/include
+-I /usr/local/include
+-I /usr/lib/gcc/x86_64-pc-linux-gnu/13.3.1/include-fixed
+-I /usr/include
+-DLOCAL
+-Wall
+-O2
+-Wextra
+-Wshadow
+-Wconversion
+-Wfloat-equal
+-Wno-unused-const-variable
+-Wno-sign-conversion
+-std=c++17
+

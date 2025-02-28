@@ -1,42 +1,28 @@
 import serial
-import time
+import struct
 
-# Set up serial connection
-SERIAL_PORT = "/dev/rfcomm0"  # Adjust if needed
-BAUD_RATE = 9600  # Must match HC-05 settings
-TIMEOUT = 60  # Time in seconds to receive data
+# Configure serial port (adjust as needed)
+serial_port = "/dev/rfcomm0"  # Your Bluetooth COM port
+baud_rate = 9600
 
+try:
+    ser = serial.Serial(serial_port, baud_rate, timeout=1)
+    print(f"Connected to {serial_port} at {baud_rate} baud")
 
-def receive_data(duration=TIMEOUT):
-    """Receives data from the HC-05 for a given duration and analyzes it."""
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-    received_messages = []
-    start_time = time.time()
+    while True:
+        # Read 12 bytes (each int16_t is 2 bytes, and we have 6 values)
+        raw_data = ser.read(12)
 
-    print(f"Receiving data for {duration} seconds...")
+        if len(raw_data) == 12:  # Ensure we received full packet
+            accel = struct.unpack('<hhh', raw_data[:6])
+            gyro = struct.unpack('<hhh', raw_data[6:])
+            print(f"Accel: {accel}, Gyro: {gyro}")
 
-    while time.time() - start_time < duration:
-        data = ser.readline().decode().strip()  # Read a line
-        if data:
-            received_messages.append(data)  # Store received message
+except serial.SerialException as e:
+    print(f"Error: {e}")
+except KeyboardInterrupt:
+    print("\nExiting...")
 
-    ser.close()
-
-    # Analysis
-    total_messages = len(received_messages)
-    total_bytes = sum(len(msg.encode()) for msg in received_messages)
-
-    print("\n=== Data Analysis ===")
-    print(f"Total messages received: {total_messages}")
-    print(f"Total bytes received: {total_bytes} bytes")
-    print(f"Average message size: {total_bytes / total_messages:.2f} bytes" if total_messages > 0 else "No data received.")
-
-    # Save to file (optional)
-    with open("received_data.txt", "w") as f:
-        for msg in received_messages:
-            f.write(msg + "\n")
-
-    print("Data saved to received_data.txt")
-
-
-receive_data()
+finally:
+    if 'ser' in locals() and ser.is_open:
+        ser.close()

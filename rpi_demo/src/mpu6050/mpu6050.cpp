@@ -1,9 +1,9 @@
 #include "mpu6050.h"
-
 void MPU6050::begin()
 {
   uint8_t val[] = {MPU6050_POWER, 0x00};
   i2c_write_blocking(I2C_PORT, MPU6050_ADDRESS, val, 2, false);
+  sleep_ms(100);  // Wait for sensor to stabilize
 }
 
 void MPU6050::configure(int16_t *bias)
