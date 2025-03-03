@@ -19,7 +19,6 @@ private:
 public:
     BluetoothSender(uart_inst_t* uartPort);
     int sendData(SensorData& data);
-    int testConnection();
 };
 
 #endif

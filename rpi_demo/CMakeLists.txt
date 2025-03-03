@@ -22,7 +22,7 @@ add_executable(bt_app
 )
 
 # Include directories
-target_include_directories(bt_app PRIVATE src/bt src/mpu6050)
+target_include_directories(bt_app PRIVATE src/bt src/mpu6050 src/huffman)
 
 # Link standard Pico libraries
 target_link_libraries(bt_app

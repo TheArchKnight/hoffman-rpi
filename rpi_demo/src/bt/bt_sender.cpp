@@ -7,10 +7,6 @@ BluetoothSender::BluetoothSender(uart_inst_t* uartPort) {
   uart = uartPort;
 }
 
-int BluetoothSender::testConnection(){
-  uart_putc(uart, 'c');
-  return 0;
-}
 int BluetoothSender::sendData(SensorData& data) {
   uint8_t buffer[sizeof(SensorData)]; 
   std::memcpy(buffer, data.accel, sizeof(data.accel));
