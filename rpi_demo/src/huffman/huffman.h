@@ -1,46 +1,48 @@
 #ifndef HUFFMAN_H
 #define HUFFMAN_H
 
-#include <iostream>
+#include <string>
 #include <vector>
-#include <queue>
-#include <map>
-#include <bitset>
-#include <cmath>
-#include <chrono>
+#include <unordered_map>
+#include <cstdint>
 
-class FixedPoint {
+class Huffman {
 private:
-  static const int SCALE = 16384;    
-  static const int FRACTION_BITS = 14;
-  int32_t value;
+  struct HuffmanNode {
+    int16_t value;
+    int freq;
+    HuffmanNode* left;
+    HuffmanNode* right;
 
-public:
-  FixedPoint(float decimal = 0);
-  std::string toBinary() const;
-  float toDecimal() const;
-  bool operator==(const FixedPoint& other) const;
-};
-
-class HuffmanCompression {
-private:
-  struct Node {
-    std::string value;
-    int frequency;
-    Node* left;
-    Node* right;
-    Node(std::string v, int f);
+    HuffmanNode(int16_t v, int f) : value(v), freq(f), left(nullptr), right(nullptr) {}
   };
 
-  Node* root;
-  std::map<std::string, std::string> codes;
-  void generateCodes(Node* node, std::string code);
+  struct Compare {
+    bool operator()(HuffmanNode* a, HuffmanNode* b) {
+      return a->freq > b->freq;  // Min-heap based on frequency
+    }
+  };
+
+  HuffmanNode* root;
+  std::unordered_map<int16_t, std::string> huffmanCodes;
+
+  void buildCodes(HuffmanNode* node, const std::string& code);
+  void deleteTree(HuffmanNode* node);
 
 public:
-  HuffmanCompression();
-  std::string compress(const std::vector<FixedPoint>& data);
-  std::vector<FixedPoint> decompress(const std::string& compressed);
-  size_t getMemoryUsage() const;
+  Huffman();
+  ~Huffman();
+
+  // Build the Huffman tree from a flattened vector of int16_t values.
+  void buildTree(const std::vector<int16_t>& data);
+
+  // Encode the flattened data into a vector of uint16_t (packed bits)
+  std::vector<uint16_t> encode(const std::vector<int16_t>& flattenedData);
+
+  // Decode the compressed data back into a flattened vector of int16_t.
+  // 'bitSize' is the total number of valid bits in the encoded bit stream.
+  std::vector<int16_t> decode(const std::vector<uint16_t>& encodedData, int bitSize);
 };
 
 #endif // HUFFMAN_H
+

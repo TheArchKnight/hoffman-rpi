@@ -19,6 +19,7 @@ add_executable(bt_app
   src/main.cpp
   src/bt/bt_sender.cpp
   src/mpu6050/mpu6050.cpp
+  src/huffman/huffman.cpp
 )
 
 # Include directories

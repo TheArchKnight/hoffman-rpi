@@ -1,5 +1,7 @@
 #ifndef BLUETOOTHSENDER_H
 #define BLUETOOTHSENDER_H
+#include "huffman.h"
+#include <vector>
 #define BAUD_RATE 9600
 #define TX_PIN 0
 #define RX_PIN 1
@@ -14,11 +16,12 @@
 
 class BluetoothSender {
 private:
-    uart_inst_t* uart;
+  uart_inst_t* uart;
 
 public:
-    BluetoothSender(uart_inst_t* uartPort);
-    int sendData(SensorData& data);
+  BluetoothSender(uart_inst_t* uartPort);
+  int sendData(Huffman& huffman, std::vector<SensorData>& data);
+  bool receiveHandShake();
 };
 
 #endif

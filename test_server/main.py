@@ -1,28 +1,49 @@
 import serial
-import struct
+import time
 
-# Configure serial port (adjust as needed)
-serial_port = "/dev/rfcomm0"  # Your Bluetooth COM port
-baud_rate = 9600
+def main():
+    port = "/dev/rfcomm0"
+    baudrate = 9600
+    timeout = 1  # seconds
 
-try:
-    ser = serial.Serial(serial_port, baud_rate, timeout=1)
-    print(f"Connected to {serial_port} at {baud_rate} baud")
+    try:
+        ser = serial.Serial(port, baudrate, timeout=timeout)
+    except Exception as e:
+        print("Error opening serial port {}: {}".format(port, e))
+        return
+
+    if ser.is_open:
+        print("Serial port {} opened successfully.".format(port))
+    else:
+        print("Failed to open serial port {}.".format(port))
+        return
 
     while True:
-        # Read 12 bytes (each int16_t is 2 bytes, and we have 6 values)
-        raw_data = ser.read(12)
+        # Flush any old data from the input buffer.
+        ser.reset_input_buffer()
 
-        if len(raw_data) == 12:  # Ensure we received full packet
-            accel = struct.unpack('<hhh', raw_data[:6])
-            gyro = struct.unpack('<hhh', raw_data[6:])
-            print(f"Accel: {accel}, Gyro: {gyro}")
+        # Send handshake '1'
+        handshake = b"1"
+        ser.write(handshake)
+        print("Sent handshake '1'.")
 
-except serial.SerialException as e:
-    print(f"Error: {e}")
-except KeyboardInterrupt:
-    print("\nExiting...")
+        # Read incoming data until "END" is received
+        buffer = b""
+        while True:
+            chunk = ser.read(64)  # read up to 64 bytes at a time
+            if chunk:
+                buffer += chunk
+                if b"END" in buffer:
+                    break
 
-finally:
-    if 'ser' in locals() and ser.is_open:
-        ser.close()
+        # Remove the marker "END" from the received data
+        marker_index = buffer.find(b"END")
+        received_data = buffer[:marker_index]
+
+        print("Received data size: {} bytes".format(len(received_data)))
+        # Optional delay before processing the next package
+        time.sleep(1)
+
+    ser.close()
+if __name__ == "__main__":
+    main()

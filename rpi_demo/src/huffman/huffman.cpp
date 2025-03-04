@@ -1,114 +1,106 @@
 #include "huffman.h"
+#include <bitset>
+#include <queue>
 
-using namespace std;
-using namespace std::chrono;
+Huffman::Huffman() : root(nullptr) {}
 
-// Implementación de FixedPoint
-FixedPoint::FixedPoint(float decimal) {
-  value = round(decimal * SCALE);
+Huffman::~Huffman() {
+  deleteTree(root);
 }
 
-string FixedPoint::toBinary() const {
-  return bitset<16>(value).to_string();
+void Huffman::deleteTree(HuffmanNode* node) {
+  if (node) {
+    deleteTree(node->left);
+    deleteTree(node->right);
+    delete node;
+  }
 }
 
-float FixedPoint::toDecimal() const {
-  return static_cast<float>(value) / SCALE;
-}
-
-bool FixedPoint::operator==(const FixedPoint& other) const {
-  return value == other.value;
-}
-
-// Implementación de HuffmanCompression::Node
-HuffmanCompression::Node::Node(string v, int f) : value(v), frequency(f), left(nullptr), right(nullptr) {}
-
-// Implementación de HuffmanCompression
-HuffmanCompression::HuffmanCompression() : root(nullptr) {}
-
-void HuffmanCompression::generateCodes(Node* node, string code) {
+void Huffman::buildCodes(HuffmanNode* node, const std::string& code) {
   if (!node) return;
+  // Leaf node
   if (!node->left && !node->right) {
-    codes[node->value] = code;
-    return;
+    huffmanCodes[node->value] = code;
   }
-  generateCodes(node->left, code + "0");
-  generateCodes(node->right, code + "1");
+  buildCodes(node->left, code + "0");
+  buildCodes(node->right, code + "1");
 }
 
-string HuffmanCompression::compress(const vector<FixedPoint>& data) {
-  auto start = high_resolution_clock::now();
-
-  // Calcular frecuencias
-  map<string, int> freq;
-  for (const auto& num : data) {
-    freq[num.toBinary()]++;
+void Huffman::buildTree(const std::vector<int16_t>& data) {
+  // Create frequency map
+  std::unordered_map<int16_t, int> freqMap;
+  for (int16_t num : data) {
+    freqMap[num]++;
   }
 
-  // Crear cola de prioridad
-  auto comp = [](Node* a, Node* b) { return a->frequency > b->frequency; };
-  priority_queue<Node*, vector<Node*>, decltype(comp)> pq(comp);
-
-  for (const auto& pair : freq) {
-    pq.push(new Node(pair.first, pair.second));
+  // Build min-heap of Huffman nodes
+  std::priority_queue<HuffmanNode*, std::vector<HuffmanNode*>, Compare> pq;
+  for (const auto& pair : freqMap) {
+    pq.push(new HuffmanNode(pair.first, pair.second));
   }
 
-  // Construir árbol
+  // Combine nodes until one remains
   while (pq.size() > 1) {
-    Node* left = pq.top(); pq.pop();
-    Node* right = pq.top(); pq.pop();
-    Node* parent = new Node("", left->frequency + right->frequency);
+    HuffmanNode* left = pq.top();
+    pq.pop();
+    HuffmanNode* right = pq.top();
+    pq.pop();
+
+    HuffmanNode* parent = new HuffmanNode(-1, left->freq + right->freq);
     parent->left = left;
     parent->right = right;
     pq.push(parent);
   }
-
   root = pq.top();
-  generateCodes(root, "");
+  pq.pop();
 
-  // Comprimir datos
-  string compressed;
-  for (const auto& num : data) {
-    compressed += codes[num.toBinary()];
-  }
-
-  auto end = high_resolution_clock::now();
-  duration<double, milli> duration = end - start;
-  cout << "Tiempo de compresión: " << duration.count() << "ms\n";
-
-  return compressed;
+  // Build the Huffman codes from the tree
+  huffmanCodes.clear();
+  buildCodes(root, "");
 }
 
-vector<FixedPoint> HuffmanCompression::decompress(const string& compressed) {
-  vector<FixedPoint> result;
-  Node* current = root;
+std::vector<uint16_t> Huffman::encode(const std::vector<int16_t>& flattenedData) {
+  std::string bitString;
+  // Convert each value to its Huffman code
+  for (int16_t num : flattenedData) {
+    bitString += huffmanCodes[num];
+  }
 
-  for (char bit : compressed) {
+  std::vector<uint16_t> encodedData;
+  // Pack bits into 16-bit words
+  for (size_t i = 0; i < bitString.size(); i += 16) {
+    std::string chunk = bitString.substr(i, 16);
+    // Pad with zeros if chunk is less than 16 bits
+    while (chunk.size() < 16) {
+      chunk.push_back('0');
+    }
+    uint16_t value = static_cast<uint16_t>(std::bitset<16>(chunk).to_ulong());
+    encodedData.push_back(value);
+  }
+  return encodedData;
+}
+
+std::vector<int16_t> Huffman::decode(const std::vector<uint16_t>& encodedData, int bitSize) {
+  // Reconstruct the full bit string from the encoded data
+  std::string bitString;
+  for (uint16_t word : encodedData) {
+    bitString += std::bitset<16>(word).to_string();
+  }
+  // Use only the valid number of bits (remove padding)
+  if (bitString.size() > static_cast<size_t>(bitSize)) {
+    bitString = bitString.substr(0, bitSize);
+  }
+
+  std::vector<int16_t> decodedData;
+  HuffmanNode* current = root;
+  for (char bit : bitString) {
     current = (bit == '0') ? current->left : current->right;
-
+    // If a leaf node is reached, output the value and restart from the root
     if (!current->left && !current->right) {
-      int32_t value = bitset<16>(current->value).to_ulong();
-      result.push_back(FixedPoint(static_cast<float>(value) / 16384));
+      decodedData.push_back(current->value);
       current = root;
     }
   }
-
-  return result;
-}
-
-size_t HuffmanCompression::getMemoryUsage() const {
-  size_t memory = sizeof(HuffmanCompression) + codes.size() * (sizeof(string) * 2);
-  
-  queue<Node*> q;
-  q.push(root);
-  while (!q.empty()) {
-    Node* node = q.front();
-    q.pop();
-    memory += sizeof(Node);
-    if (node->left) q.push(node->left);
-    if (node->right) q.push(node->right);
-  }
-  
-  return memory;
+  return decodedData;
 }
 
